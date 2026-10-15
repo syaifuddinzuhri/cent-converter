@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cent Converter</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #070b14;
+    --card: rgba(255,255,255,0.045);
+    --card-border: rgba(255,255,255,0.09);
+    --text: #e8ecf5;
+    --muted: #8b93a7;
+    --accent: #f5b544;
+    --accent-2: #ff7a59;
+    --field: rgba(0,0,0,0.35);
+    --ok: #3ddc97;
+    --err: #ff6b6b;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    min-height: 100vh;
+    font-family: Inter, system-ui, sans-serif;
+    color: var(--text);
+    background: var(--bg);
+    display: flex; align-items: center; justify-content: center;
+    padding: 32px 16px;
+    overflow-x: hidden;
+  }
+  .glow { position: fixed; border-radius: 50%; filter: blur(110px); opacity: .35; z-index: 0; pointer-events: none; }
+  .glow.a { width: 420px; height: 420px; background: var(--accent); top: -120px; left: -100px; }
+  .glow.b { width: 380px; height: 380px; background: #5b6cff; bottom: -140px; right: -80px; }
+
+  .wrap { position: relative; z-index: 1; width: 100%; max-width: 460px; }
+  header { text-align: center; margin-bottom: 24px; }
+  header h1 { font-size: 28px; font-weight: 800; letter-spacing: -0.02em; }
+  header h1 span { background: linear-gradient(90deg, var(--accent), var(--accent-2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  header p { color: var(--muted); font-size: 14px; margin-top: 6px; }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 24px;
+    padding: 22px;
+    backdrop-filter: blur(18px);
+    box-shadow: 0 30px 80px -20px rgba(0,0,0,.6);
+  }
+
+  .tabs { position: relative; display: grid; grid-template-columns: 1fr 1fr; background: var(--field); border-radius: 14px; padding: 4px; margin-bottom: 22px; }
+  .tabs button {
+    position: relative; z-index: 1; border: 0; background: none; color: var(--muted);
+    font: 600 14px Inter, sans-serif; padding: 11px 0; cursor: pointer; border-radius: 10px; transition: color .25s;
+  }
+  .tabs button.active { color: #1a1206; }
+  .tabs .pill {
+    position: absolute; top: 4px; bottom: 4px; left: 4px; width: calc(50% - 4px);
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    border-radius: 10px; transition: transform .3s cubic-bezier(.4,1.4,.6,1);
+    box-shadow: 0 6px 20px -6px var(--accent);
+  }
+  .tabs[data-tab="usc"] .pill { transform: translateX(100%); }
+
+  .field { background: var(--field); border: 1px solid var(--card-border); border-radius: 16px; padding: 14px 16px; transition: border-color .2s; }
+  .field:focus-within { border-color: var(--accent); }
+  .field label { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); font-weight: 500; text-transform: uppercase; letter-spacing: .06em; }
+  .row { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
+  .row input {
+    flex: 1; min-width: 0; background: none; border: 0; outline: none; color: var(--text);
+    font: 700 26px "JetBrains Mono", monospace;
+  }
+  .badge { font: 700 13px Inter, sans-serif; padding: 6px 10px; border-radius: 8px; background: rgba(255,255,255,.08); white-space: nowrap; }
+
+  .swap { display: flex; justify-content: center; margin: -8px 0; position: relative; z-index: 2; }
+  .swap div {
+    width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center;
+    background: #121828; border: 1px solid var(--card-border); color: var(--accent); font-size: 16px;
+  }
+
+  .quick { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+  .quick button {
+    flex: 1; min-width: 60px; border: 1px solid var(--card-border); background: rgba(255,255,255,.03); color: var(--text);
+    font: 600 12px "JetBrains Mono", monospace; padding: 8px 0; border-radius: 10px; cursor: pointer; transition: all .2s;
+  }
+  .quick button:hover { border-color: var(--accent); color: var(--accent); }
+
+  .info { margin-top: 18px; display: grid; gap: 8px; font-size: 13px; }
+  .info .line { display: flex; justify-content: space-between; align-items: center; gap: 10px; color: var(--muted); }
+  .info .line b { color: var(--text); font: 600 13px "JetBrains Mono", monospace; text-align: right; }
+  .ratio input {
+    width: 90px; background: var(--field); border: 1px solid var(--card-border); color: var(--text);
+    border-radius: 8px; padding: 4px 8px; font: 600 13px "JetBrains Mono", monospace; text-align: right; outline: none;
+  }
+  .ratio input:focus { border-color: var(--accent); }
+
+  .status { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 18px; padding-top: 16px; border-top: 1px dashed var(--card-border); font-size: 12px; color: var(--muted); }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--muted); margin-right: 6px; vertical-align: middle; }
+  .dot.ok { background: var(--ok); box-shadow: 0 0 10px var(--ok); }
+  .dot.err { background: var(--err); }
+  .refresh { border: 1px solid var(--card-border); background: none; color: var(--text); padding: 6px 12px; border-radius: 8px; cursor: pointer; font: 600 12px Inter, sans-serif; }
+  .refresh:hover { border-color: var(--accent); color: var(--accent); }
+  .refresh.spin span { display: inline-block; animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  footer { text-align: center; color: var(--muted); font-size: 11px; margin-top: 18px; opacity: .7; }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+<div class="glow a"></div>
+<div class="glow b"></div>
+
+<main class="wrap">
+  <header>
+    <h1>Cent <span>→ IDR</span></h1>
+    <p>Konversi saldo akun cent ke Rupiah, real-time</p>
+  </header>
+
+  <section class="card">
+    <div class="tabs" id="tabs" data-tab="idc">
+      <div class="pill"></div>
+      <button data-tab="idc" class="active">IDC → IDR</button>
+      <button data-tab="usc">USC → IDR</button>
+    </div>
+
+    <div class="field">
+      <label><span id="fromLabel">Jumlah IDC</span><span id="fromSub">IDR Cent</span></label>
+      <div class="row">
+        <input id="from" inputmode="decimal" autocomplete="off" value="100000">
+        <span class="badge" id="fromBadge">IDC</span>
+      </div>
+    </div>
+
+    <div class="swap"><div>⇅</div></div>
+
+    <div class="field">
+      <label><span>Hasil</span><span>Rupiah</span></label>
+      <div class="row">
+        <input id="to" inputmode="decimal" autocomplete="off">
+        <span class="badge">IDR</span>
+      </div>
+    </div>
+
+    <div class="quick" id="quick"></div>
+
+    <div class="info">
+      <div class="line ratio">
+        <span id="ratioLabel">1 IDR =</span>
+        <span><input id="ratio" inputmode="decimal"> <span id="ratioUnit">IDC</span></span>
+      </div>
+      <div class="line usc-only hidden"><span>Setara USD</span><b id="usd">—</b></div>
+      <div class="line"><span>Kurs USD/IDR</span><b id="rate">—</b></div>
+    </div>
+
+    <div class="status">
+      <span><i class="dot" id="dot"></i><span id="statusText">Memuat kurs…</span></span>
+      <button class="refresh" id="refresh"><span>↻</span> Refresh</button>
+    </div>
+  </section>
+
+  <footer>Kurs dari open.er-api.com (fallback: fawazahmed0 currency-api). Bukan nasihat keuangan.</footer>
+</main>
+
+<script>
+  // Number of cent units per 1 major unit, per tab. Editable in the UI.
+  const DEFAULT_RATIO = { idc: 100, usc: 100 };
+  const QUICK = {
+    idc: [10000, 100000, 1000000, 10000000],
+    usc: [1000, 10000, 100000, 1000000],
+  };
+  const APIS = [
+    async () => {
+      const r = await fetch('https://open.er-api.com/v6/latest/USD');
+      const j = await r.json();
+      if (j.result !== 'success') throw new Error('er-api failed');
+      return { rate: j.rates.IDR, updated: new Date(j.time_last_update_unix * 1000), source: 'open.er-api.com' };
+    },
+    async () => {
+      const r = await fetch('https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json');
+      const j = await r.json();
+      return { rate: j.usd.idr, updated: new Date(j.date), source: 'currency-api' };
+    },
+  ];
+
+  const $ = id => document.getElementById(id);
+  const state = { tab: 'idc', rate: null, ratio: { ...DEFAULT_RATIO }, last: 'from' };
+  try { Object.assign(state.ratio, JSON.parse(localStorage.getItem('centRatio') || '{}')); } catch {}
+
+  const idr = new Intl.NumberFormat('id-ID', { maximumFractionDigits: 2 });
+  const fmt = n => (Number.isFinite(n) ? idr.format(n) : '');
+  const parse = s => {
+    // Accept Indonesian style (1.000.000,50) and plain (1000000.50).
+    s = String(s).trim().replace(/\s/g, '');
+    if (!s) return NaN;
+    if (s.includes(',')) s = s.replace(/\./g, '').replace(',', '.');
+    else if ((s.match(/\./g) || []).length > 1 || /\.\d{3}$/.test(s)) s = s.replace(/\./g, '');
+    return parseFloat(s);
+  };
+
+  // IDR value of one cent unit on the active tab.
+  function idrPerCent() {
+    const ratio = state.ratio[state.tab];
+    if (!(ratio > 0)) return NaN;
+    return state.tab === 'idc' ? 1 / ratio : (state.rate ?? NaN) / ratio;
+  }
+
+  function compute() {
+    const k = idrPerCent();
+    if (state.last === 'from') {
+      const v = parse($('from').value);
+      $('to').value = Number.isFinite(v * k) ? fmt(v * k) : '';
+    } else {
+      const v = parse($('to').value);
+      $('from').value = Number.isFinite(v / k) ? fmt(v / k) : '';
+    }
+    const cents = parse($('from').value);
+    $('usd').textContent = Number.isFinite(cents) ? '$ ' + new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(cents / state.ratio.usc) : '—';
+  }
+
+  function setTab(tab) {
+    state.tab = tab;
+    $('tabs').dataset.tab = tab;
+    document.querySelectorAll('.tabs button').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+    const isIdc = tab === 'idc';
+    $('fromLabel').textContent = isIdc ? 'Jumlah IDC' : 'Jumlah USC';
+    $('fromSub').textContent = isIdc ? 'IDR Cent' : 'US Cent';
+    $('fromBadge').textContent = isIdc ? 'IDC' : 'USC';
+    $('ratioLabel').textContent = isIdc ? '1 IDR =' : '1 USD =';
+    $('ratioUnit').textContent = isIdc ? 'IDC' : 'USC';
+    $('ratio').value = state.ratio[tab];
+    document.querySelectorAll('.usc-only').forEach(el => el.classList.toggle('hidden', isIdc));
+    $('quick').innerHTML = QUICK[tab].map(n => `<button data-v="${n}">${new Intl.NumberFormat('id-ID', { notation: 'compact' }).format(n)}</button>`).join('');
+    state.last = 'from';
+    compute();
+  }
+
+  async function loadRate() {
+    $('refresh').classList.add('spin');
+    $('dot').className = 'dot';
+    $('statusText').textContent = 'Memuat kurs…';
+    for (const api of APIS) {
+      try {
+        const { rate, updated, source } = await api();
+        if (!(rate > 0)) throw new Error('bad rate');
+        state.rate = rate;
+        $('rate').textContent = 'Rp ' + fmt(rate);
+        $('dot').className = 'dot ok';
+        $('statusText').textContent = `${source} · ${updated.toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}`;
+        $('refresh').classList.remove('spin');
+        compute();
+        return;
+      } catch (e) { console.warn(e); }
+    }
+    $('dot').className = 'dot err';
+    $('statusText').textContent = 'Gagal memuat kurs';
+    $('refresh').classList.remove('spin');
+  }
+
+  $('tabs').addEventListener('click', e => { const b = e.target.closest('button'); if (b) setTab(b.dataset.tab); });
+  $('from').addEventListener('input', () => { state.last = 'from'; compute(); });
+  $('to').addEventListener('input', () => { state.last = 'to'; compute(); });
+  $('from').addEventListener('blur', () => { const v = parse($('from').value); if (Number.isFinite(v)) $('from').value = fmt(v); });
+  $('to').addEventListener('blur', () => { const v = parse($('to').value); if (Number.isFinite(v)) $('to').value = fmt(v); });
+  $('ratio').addEventListener('input', () => {
+    state.ratio[state.tab] = parse($('ratio').value);
+    try { localStorage.setItem('centRatio', JSON.stringify(state.ratio)); } catch {}
+    compute();
+  });
+  $('quick').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; $('from').value = fmt(+b.dataset.v); state.last = 'from'; compute(); });
+  $('refresh').addEventListener('click', loadRate);
+
+  $('from').value = fmt(parse($('from').value));
+  setTab('idc');
+  loadRate();
+</script>
+</body>
+</html>
